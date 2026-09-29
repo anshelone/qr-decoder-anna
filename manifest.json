@@ -1,0 +1,13 @@
+{
+  "name": "QR Decoder — Анна Шелестова",
+  "short_name": "QR Decoder 💗",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff5fa",
+  "theme_color": "#ff4f9a",
+  "description": "Декодер QR-кодов проекта Анны Шелестовой для научной конференции.",
+  "icons": [
+    {"src":"/static/icon-180.png","sizes":"180x180","type":"image/png"},
+    {"src":"/static/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}

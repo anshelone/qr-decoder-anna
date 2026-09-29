@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff4f9a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QR Decoder 💗">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="stylesheet" href="/static/style.css">
+  <title>QR Decoder 💗 — Анна Шелестова</title>
+</head>
+<body>
+<header class="hero">
+  <div class="floating-pig pig-a">🐷</div>
+  <div class="floating-pig pig-b">🐷</div>
+  <div class="wrap hero-inner">
+    <div class="sticker">✨ НАУЧНАЯ КОНФЕРЕНЦИЯ ✨</div>
+    <div class="eyebrow">ПОЛИТЕХ · ПРОЕКТ АННЫ ШЕЛЕСТОВОЙ</div>
+    <h1>QR Decoder <span>💗</span></h1>
+    <p class="hero-sub">Сканируем QR и возвращаем сжатому тексту человеческий вид.</p>
+    <div class="author-card"><div class="avatar">АШ</div><div><strong>Анна Шелестова</strong><span>декодер QR-кодов проекта · Политех</span></div></div>
+  </div>
+</header>
+
+<section class="meme-banner">
+  <div class="wrap meme-grid">
+    <div class="meme-text">
+      <span class="tiny">КОГДА QR-КОД УЖЕ НЕ ХОЧЕТСЯ ПРОСТО СКАНИРОВАТЬ</span>
+      <h2>ТЫ ЕГО<br><em>РАЗБИРАЕШЬ ПО БАЙТАМ</em> 💅</h2>
+      <p>zlib, lzma, bz2, brotli, zstandard и lz4 — приложение умеет возвращать исходный текст.</p>
+    </div>
+    <img src="/static/unicorn_dog.jpg" alt="Мемная собачка">
+    <img src="/static/flying_pigs.png" alt="Мемные свинки">
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="conference-note"><span>📱</span><div><b>QR Decoder</b> · приложение для проверки QR-кодов проекта Анны Шелестовой</div></div>
+
+  <section class="panel scanner-panel">
+    <div class="section-title"><div><span class="number">01</span><h2>Сканировать QR</h2></div><span class="badge">Камера + фото</span></div>
+    <div id="reader"></div>
+    <div class="scanner-actions">
+      <button id="startCamera" class="primary">📷 Включить камеру</button>
+      <button id="stopCamera" class="secondary" disabled>⏹ Остановить</button>
+    </div>
+    <p class="hint">На iPhone Safari попросит разрешение на камеру. Можно также выбрать фото с QR-кодом.</p>
+    <input id="qrFile" type="file" accept="image/*" class="file-input">
+    <label for="qrFile" class="file-button">🖼️ Выбрать фото QR-кода</label>
+  </section>
+
+  <section class="panel">
+    <div class="section-title"><div><span class="number">02</span><h2>Расшифровка</h2></div><span class="badge">Авто</span></div>
+    <label class="field-label" for="algorithm">Алгоритм</label>
+    <select id="algorithm" class="select">
+      <option value="auto">Автоопределение</option>
+      <option value="none">Без сжатия</option>
+      <option value="zlib">zlib</option>
+      <option value="lzma">lzma</option>
+      <option value="bz2">bz2</option>
+      <option value="brotli">brotli</option>
+      <option value="zstandard">zstandard</option>
+      <option value="lz4">lz4</option>
+    </select>
+    <textarea id="payload" placeholder="Здесь появится содержимое QR-кода…"></textarea>
+    <button id="decode" class="primary full">🔓 Декодировать</button>
+    <div id="status" class="status"></div>
+  </section>
+
+  <section id="resultPanel" class="panel hidden">
+    <div class="section-title"><div><span class="number">03</span><h2>Результат 💗</h2></div><span id="method" class="badge">Готово</span></div>
+    <div id="result" class="result-box"></div>
+    <div class="result-actions">
+      <button id="copy" class="secondary">📋 Скопировать</button>
+      <a id="open" class="primary link-button hidden" target="_blank" rel="noopener">🔗 Открыть ссылку</a>
+    </div>
+  </section>
+
+  <section class="info-grid">
+    <article class="info"><span>01</span><h3>Как работает 📷</h3><p>Камера или фото считывает QR-код, после чего сервер проекта распознаёт формат данных.</p></article>
+    <article class="info"><span>02</span><h3>Что умеет 🔓</h3><p>Приложение декодирует форматы, которые использует сайт: zlib, lzma, bz2, brotli, zstandard и lz4.</p></article>
+    <article class="info"><span>03</span><h3>Проверка 🧪</h3><p>Можно выбрать алгоритм вручную или оставить «Автоопределение».</p></article>
+  </section>
+
+  <footer><strong>QR Decoder · Анализ эффективности алгоритмов сжатия для оптимизации данных в QR-кодах</strong><span>Python · Flask · iPhone Web App</span></footer>
+</main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+let scanner = null;
+let running = false;
+let lastPayload = "";
+
+const $ = s => document.querySelector(s);
+
+async function sendPayload(payload) {
+  if (!payload || payload === lastPayload) return;
+  lastPayload = payload;
+  $("#payload").value = payload;
+  await decodePayload();
+}
+
+async function decodePayload() {
+  const payload = $("#payload").value.trim();
+  if (!payload) { $("#status").textContent = "Сначала отсканируй QR-код."; return; }
+  $("#decode").disabled = true;
+  $("#status").textContent = "Расшифровываю…";
+  try {
+    const res = await fetch("/api/decode", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({payload, algorithm:$("#algorithm").value})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Ошибка расшифровки");
+    $("#resultPanel").classList.remove("hidden");
+    $("#result").textContent = data.text;
+    $("#method").textContent = data.method;
+    $("#status").textContent = "Готово ✨";
+    const isUrl = /^https?:\\/\\//i.test(data.text.trim());
+    if (isUrl) { $("#open").href = data.text.trim(); $("#open").classList.remove("hidden"); }
+    else $("#open").classList.add("hidden");
+    $("#resultPanel").scrollIntoView({behavior:"smooth", block:"center"});
+  } catch(e) { $("#status").textContent = e.message; }
+  finally { $("#decode").disabled = false; }
+}
+
+async function startCamera() {
+  if (running) return;
+  scanner = scanner || new Html5Qrcode("reader");
+  try {
+    await scanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:250,height:250}}, async text => {
+      await sendPayload(text);
+      stopCamera();
+    }, () => {});
+    running = true; $("#startCamera").disabled = true; $("#stopCamera").disabled = false; $("#status").textContent = "Камера включена — наведи её на QR 💗";
+  } catch(e) { $("#status").textContent = "Не получилось включить камеру. Разреши доступ к камере в Safari."; }
+}
+
+async function stopCamera() {
+  if (!scanner || !running) return;
+  try { await scanner.stop(); } catch(e) {}
+  running = false; $("#startCamera").disabled = false; $("#stopCamera").disabled = true;
+}
+
+$("#startCamera").addEventListener("click", startCamera);
+$("#stopCamera").addEventListener("click", stopCamera);
+$("#decode").addEventListener("click", decodePayload);
+
+$("#copy").addEventListener("click", async () => {
+  await navigator.clipboard.writeText($("#result").textContent);
+  $("#copy").textContent = "✓ Скопировано";
+  setTimeout(() => $("#copy").textContent = "📋 Скопировать", 1400);
+});
+
+$("#qrFile").addEventListener("change", async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  scanner = scanner || new Html5Qrcode("reader");
+  try {
+    $("#status").textContent = "Читаю QR с фотографии…";
+    const text = await scanner.scanFile(file, true);
+    await sendPayload(text);
+  } catch(e) { $("#status").textContent = "Не нашла QR-код на этом изображении."; }
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+</script>
+</body>
+</html>

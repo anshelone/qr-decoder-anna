@@ -1,0 +1,6 @@
+Flask>=3.0,<4
+brotli>=1.1.0
+zstandard>=0.22.0
+lz4>=4.3.3
+
+gunicorn>=23.0
